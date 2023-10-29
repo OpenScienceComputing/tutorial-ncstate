@@ -1,8 +1,8 @@
-# Materials for 2023-CSDMS Clinic 1.2: 
+# Materials for Tutorial at NCSTATE 2023-10-30: 
 "Emerging open-source Python-based infrastructure for scalable, data-proximate analysis and visualization of model output (a.k.a. the Pangeo Framework)"
 
 ## Start
-1. login to https://nebari-workshop.esipfed.org:
+1. login to https://nebari.openscicomp.io
    ```
    username: <your email address>
    password: 123  (you will be prompted to change it)
@@ -16,7 +16,7 @@
     python start.py
     ```
 1. In the file browser, browse to the 'shared'->'users' and then your username folder. 
-1. Browse to "training-2023-CSDMS"
+1. Browse to "tutorial-ncstate"
 1. Click the "clinic_overview.ipynb" notebook to launch it. 
 
 ## Deployment notes
