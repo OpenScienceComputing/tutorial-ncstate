@@ -20,7 +20,7 @@ os.chdir(my_shared_folder)
 
 # clone training material
 try:
-    subprocess.run(["git", "clone", "https://github.com/rsignell/tutorial-ncstate.git"])
+    subprocess.run(["git", "clone", "https://github.com/OpenScienceComputing/tutorial-ncstate.git"])
     print('cloned tutorial repository!')
 except:
     print('failed to clone tutorial repository')
