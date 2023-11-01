@@ -1,5 +1,5 @@
 # Materials for Pangeo Tutorial at NCSTATE: 
-Presentation: "[Emerging open-source Python-based infrastructure for scalable, data-proximate analysis and visualization of model output](https://docs.google.com/presentation/d/1q6Ijst8z8KO25-RGSbMcbFF3XnvidrW1Em1iGQFdeUw/edit?usp=sharing) (a.k.a. the Pangeo Framework)"
+Presentation: "[The Pangeo Framework: An emerging open-source Python-based infrastructure for scalable, data-proximate analysis and visualization of model outputL (https://docs.google.com/presentation/d/1q6Ijst8z8KO25-RGSbMcbFF3XnvidrW1Em1iGQFdeUw/edit?usp=sharing) "
 
 ## Start
 1. login to https://nebari.openscicomp.io
