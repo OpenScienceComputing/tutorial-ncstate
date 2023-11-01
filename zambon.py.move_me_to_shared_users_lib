@@ -1,0 +1,245 @@
+import os,sys
+import configparser
+
+from dask_gateway import Gateway
+from dask.distributed import WorkerPlugin
+import uuid
+import asyncio
+from time import sleep
+
+def aws_add_shared_to_my_credentials(
+    s_cfile=os.path.join(os.environ['HOME'],'shared','.aws','credentials'),
+    m_cfile=os.path.join(os.environ['HOME'],'.aws','credentials')):
+    s_cp = configparser.ConfigParser()
+    m_cp = configparser.ConfigParser()
+    s_cp.read(s_cfile)
+    if not os.path.exists(m_cfile):
+        os.makedirs(os.path.dirname(m_cfile),exist_ok=True)
+        with open(m_cfile, "w") as f:
+            f.write('')
+    m_cp.read(m_cfile)
+    # Missing shared profiles in my profiles:
+    missing=set(s_cp) - set(m_cp)
+    # print(missing)
+    #print(missing,set(s_cp),set(m_cp))
+    # Add missing to my credentials
+    for m in missing:
+        print(f'adding section [{m}] to {m_cfile}')
+        m_cp.add_section(m)
+        for k in s_cp[m]:
+            # print(m,k,s_cp[m][k])
+            m_cp.set(m,k,s_cp[m][k])
+    m_cp.update()   
+    # Write the updated file
+    with open(m_cfile,"w") as f:
+        m_cp.write(f)
+    return m_cfile
+
+def aws_add_shared_to_my_config(
+    s_cfile=os.path.join(os.environ['HOME'],'shared','.aws','config'),
+    m_cfile=os.path.join(os.environ['HOME'],'.aws','config')):
+    aws_add_shared_to_my_credentials(s_cfile,m_cfile)
+
+def set_credentials(profile='w-ebd-public',region='us-east-1',endpoint_url='s3.wasabisys.com'):
+    '''Sets the aws credentials if not set already and profilename is default'''
+    # Update user credentials and config with missing credentials from shared credentials
+    m_cfile=aws_add_shared_to_my_credentials()
+    aws_add_shared_to_my_config()
+    # Set the credentials from the user credentials file
+    cp = configparser.ConfigParser()
+    cp.read(m_cfile)
+    os.environ['aws_access_key_id'.upper()]=cp[profile]['aws_access_key_id']	
+    os.environ['aws_secret_access_key'.upper()]=cp[profile]['aws_secret_access_key']	
+    os.environ['aws_profile'.upper()]=profile
+    os.environ['aws_default_profile'.upper()]=profile
+    os.environ['aws_s3_region'.upper()]=region
+    os.environ['aws_s3_endpoint'.upper()]=endpoint_url
+    os.environ['aws_default_region'.upper()]=region
+        
+def set_credentials2(profile='default',region='us-west-2',endpoint_url=None,cfile=None):
+    # Set the credentials from the user credentials file
+    cp = configparser.ConfigParser()
+    if not cfile:
+        cfile=os.path.join(os.environ['HOME'],'.aws','credentials')
+    if not endpoint_url:
+        endpoint_url=f's3.{region}.amazonaws.com'
+    cp.read(cfile)
+    os.environ['aws_access_key_id'.upper()]=cp[profile]['aws_access_key_id']    
+    os.environ['aws_secret_access_key'.upper()]=cp[profile]['aws_secret_access_key']    
+    os.environ['aws_profile'.upper()]=profile
+    os.environ['aws_default_profile'.upper()]=profile
+    os.environ['aws_s3_region'.upper()]=region
+    os.environ['aws_s3_endpoint'.upper()]=endpoint_url
+    os.environ['aws_default_region'.upper()]=region
+
+def list_profiles(cfile=os.path.join(os.environ['HOME'],'.aws','credentials')):
+    cp = configparser.ConfigParser()
+    cp.read(cfile)
+    profiles=list(cp)
+    print(f'Your available profiles:\n({cfile})')
+    print('\n'.join(profiles))
+    
+def start_dask_cluster(environment=None,worker_profile='Small Worker',profile='default',
+                        region=None,endpoint_url=None,worker_min=2,worker_max=20,
+                        adaptive_scaling=True,wait_for_cluster=True,
+                        cfile=None,use_existing_cluster=True,propagate_env=False,env_vars=[]):
+    '''
+    environment      - Default None. Automatically match the kernel running
+    worker profile   - 'Small Worker', 'Medium Worker', or 'Pangeo Worker' (determines available memory in a worker)
+    profile          - 'default' is good, but others can be used 
+    region           - AWS region (ignored for OSN pods and other non AWS)
+    endpoint_url         - url endpoint to S3 buckets (e.g. for non AWS S3 buckets)
+    worker_min       - minumum number of workers (for adaptive scaling)
+    worker_max       - maximum number of workers
+    adaptive_scaling - Default True. If False, launches worker_max workers
+    wait_for_cluster - Default True. 
+    cfile            - None. Finds aws credentials in this file
+    use_existing_cluster - Default True.
+    propagate_env    - Default True. Propagates Worker_Plugins
+    env_vars         - Extra environment variables to propagate (Not AWS region, key and secret)
+    '''
+    if not environment:
+        p = os.environ['CONDA_PREFIX'].split('/')
+        environment = f'{p[3]}/{p[-1]}'
+    
+    if worker_profile not in ['Small Worker','Medium Worker']:
+        worker_profile='Medium Worker'
+        
+    if not region:
+        if 'AWS_DEFAULT_REGION' in os.environ:
+            region=os.environ['AWS_DEFAULT_REGION']
+        else:
+            region='us-west-2'
+            print('Warning: Region set to default:',region)
+    print('Region:',region)
+    
+    if not endpoint_url:
+        endpoint_url=f's3.{region}.amazonaws.com'
+    
+
+
+    try:
+        gateway.list_clusters()
+    except:
+        gateway = Gateway()
+
+
+    if gateway.list_clusters():
+        print('Existing Dask clusters:')
+        j=0
+        for c in gateway.list_clusters():
+            print(f'Cluster Index c_idx: {j} / Name:',c.name,c.status)
+            j+=1        
+    else:
+        print('No Cluster running.')
+
+    # TODO Check if worker_profile is the same, otherwise start new cluster
+    if gateway.list_clusters() and use_existing_cluster:
+        print('Using existing cluster [0].')
+        cluster=gateway.connect(gateway.list_clusters()[0].name)  
+    else:
+        print('Starting new cluster.')
+        # Set the options 
+        options = gateway.cluster_options()
+        options.conda_environment=environment
+        options.profile=worker_profile
+        # environment variables add to this list
+        aws_env_vars=['AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_DEFAULT_REGION']
+        env_dict={}
+        for env in aws_env_vars+env_vars:
+            if env in os.environ:
+                env_dict[env]=os.environ[env]
+        options.environment_vars=env_dict
+        for env in options.environment_vars:
+            print('Setting Cluster Environment Variable',env)
+
+        # Now start a new cluster which has these options
+        cluster = gateway.new_cluster(options)       
+
+    if adaptive_scaling:
+        print(f'Setting Adaptive Scaling min={worker_min}, max={worker_max}')
+        cluster.adapt(minimum=worker_min, maximum=worker_max)
+    else:
+        print(f'Setting Fixed Scaling workers={worker_max}')
+        cluster.scale(worker_max)
+        
+    try:
+        client = cluster.get_client()
+        client.close()
+        print('Reconnect client to clear cache')
+    except:
+        pass
+
+    client = cluster.get_client()
+
+    print(f'client.dashboard_link (for new browser tab/window or dashboard searchbar in Jupyterhub):\n{client.dashboard_link}')
+
+    if wait_for_cluster:
+        target_workers=worker_min if adaptive_scaling else worker_max
+        live_workers=len(list(cluster.scheduler_info['workers']))
+        t=0
+        interval=2
+        print(f'Elapsed time to wait for {target_workers} live workers:\n{live_workers}/{target_workers} workers - {t} seconds',end='')
+        while not live_workers>=target_workers:
+            sleep(interval)
+            t+=interval
+            print(f'\r{live_workers}/{target_workers} workers - {t} seconds',end='')
+            live_workers=len(client.scheduler_info()['workers'])
+        print(f'\r{live_workers}/{target_workers} workers - {t} seconds')
+
+    # We need to propagate credentials to the workers
+
+    if propagate_env:
+        set_credentials2(profile=profile,region=region,endpoint_url=endpoint_url,cfile=cfile)
+        print('Propagating environment variables to workers')
+        class InitWorker(WorkerPlugin):
+            name = "init_worker"
+
+            def __init__(self, filepath=None, script=None):
+                self.data = {}
+                if filepath:
+                    if isinstance(filepath, str):
+                        filepath = [filepath]
+                    for file_ in filepath:
+                        with open(file_, "rb") as f:
+                            filename = os.path.basename(file_)
+                            self.data[filename] = f.read()
+                if script:
+                    filename = f"{uuid.uuid1()}.py"
+                    self.data[filename] = script
+
+            async def setup(self, worker):
+                responses = await asyncio.gather(
+                    *[
+                        worker.upload_file(
+                            comm=None, filename=filename, data=data, load=True
+                        )
+                        for filename, data in self.data.items()
+                    ]
+                )
+                assert all(
+                    len(data) == r["nbytes"]
+                    for r, data in zip(responses, self.data.values())
+                )
+
+
+        script = f"""
+        \rimport warnings
+        \rwarnings.filterwarnings("ignore")
+        \rimport imagecodecs.numcodecs
+        \rimport kerchunk.grib2
+        \rimagecodecs.numcodecs.register_codecs()
+        """
+
+        plugin = InitWorker(script=script)
+        client.register_worker_plugin(plugin)
+
+    return client,cluster
+
+
+def stop_dask_cluster(client,cluster):
+    client.close()
+    cluster.shutdown()
+    client=None
+    cluster=None
+
