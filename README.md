@@ -1,4 +1,4 @@
-# Materials for Tutorial at NCSTATE 2023-10-30: 
+# Materials for Pangeo Tutorial at NCSTATE: 
 "Emerging open-source Python-based infrastructure for scalable, data-proximate analysis and visualization of model output (a.k.a. the Pangeo Framework)"
 
 ## Start
