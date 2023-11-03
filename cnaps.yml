@@ -1,0 +1,26 @@
+sources:
+  CNAPS_Forecast_Archive:
+    args:
+      consolidated: false
+      drop_variables: dstart
+      storage_options:
+        fo: s3://rsignellbucket1/cnaps/archive.json
+        lazy: 'true'
+        remote_options:
+          anon: true
+          listings_expiry_time: 10
+          skip_instance_cache: true
+          client_kwargs: 
+            endpoint_url: https://mghp.osn.xsede.org
+        remote_protocol: s3
+        skip_instance_cache: true
+        target_options:
+          anon: true
+          client_kwargs: 
+            endpoint_url: https://mghp.osn.xsede.org
+          listings_expiry_time: 10
+          skip_instance_cache: true
+        target_protocol: s3
+      urlpath: reference://
+    description: CNAPS US East and Gulf Coast Forecast Archive 
+    driver: intake_xarray.xzarr.ZarrSource
