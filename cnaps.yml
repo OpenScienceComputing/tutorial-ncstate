@@ -4,8 +4,8 @@ sources:
       consolidated: false
       drop_variables: dstart
       storage_options:
-        fo: s3://rsignellbucket1/cnaps/archive.json
-        lazy: 'true'
+        fo: s3://rsignellbucket1/jzambon/archive.json
+        lazy: False
         remote_options:
           anon: true
           listings_expiry_time: 10
@@ -22,15 +22,15 @@ sources:
           skip_instance_cache: true
         target_protocol: s3
       urlpath: reference://
-    description: CNAPS US East and Gulf Coast Forecast Archive: post-processed NetCDF4 files 
+    description: "CNAPS US East and Gulf Coast Forecast Archive: post-processed NetCDF4 files" 
     driver: intake_xarray.xzarr.ZarrSource
   CNAPS_Forecast_Archive_64:
     args:
       consolidated: false
       drop_variables: dstart
       storage_options:
-        fo: s3://rsignellbucket1/cnaps/archive64.json
-        lazy: 'true'
+        fo: s3://rsignellbucket1/jzambon/archive64.json
+        lazy: False
         remote_options:
           anon: true
           listings_expiry_time: 10
@@ -47,5 +47,5 @@ sources:
           skip_instance_cache: true
         target_protocol: s3
       urlpath: reference://
-    description: CNAPS US East and Gulf Coast Forecast Archive: original netCDF3-64bit offset  files
+    description: "CNAPS US East and Gulf Coast Forecast Archive: original netCDF3-64bit offset files"
     driver: intake_xarray.xzarr.ZarrSource
